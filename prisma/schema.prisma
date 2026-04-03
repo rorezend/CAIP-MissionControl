@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum FieldRole {
+  SSP
+  SE
+  CSA
+}
+
+enum ModerationRole {
+  Reader
+  Contributor
+  Moderator
+}
+
+enum TopicCategory {
+  AI_DATA_GO_BIG
+  OFFERS_PROGRAMS
+  PIPELINE_U2C
+  FACTORY_CONCIERGE
+  BUSINESS_VALUE
+  OBJECTION_HANDLING
+  AGENTS
+  SKILLING
+  PROCESS
+  COMPETE
+}
+
+enum SolutionPlay {
+  MIGRATE_MODERNIZE
+  UNIFY_DATA_PLATFORM
+  AI_APPS_AGENTS
+}
+
+enum TargetType {
+  TOPIC
+  WIKI
+  OFFER
+  DASHBOARD
+  LEADERSHIP
+}
+
+enum ReactionType {
+  LIKE
+  STAR
+  ROCKET
+}
+
+model User {
+  id                String          @id @default(cuid())
+  displayName       String
+  alias             String          @unique
+  fieldRole         FieldRole
+  moderationRole    ModerationRole  @default(Contributor)
+  interests         String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  authoredTopics     Topic[]
+  authoredWikiPages  WikiPage[]
+  authoredComments   Comment[]
+  authoredLeadership LeadershipPost[]
+  ratings            Rating[]
+  reactions          Reaction[]
+  bookmarks          Bookmark[]
+  revisions          WikiRevision[]
+}
+
+model Topic {
+  id                  String        @id @default(cuid())
+  title               String
+  slug                String        @unique
+  excerpt             String
+  body                String
+  category            TopicCategory
+  solutionPlay        SolutionPlay?
+  tags                String
+  isQuestion          Boolean       @default(false)
+  whatChanged         String?
+  featured            Boolean       @default(false)
+  lastUpdatedAt       DateTime      @default(now())
+  createdAt           DateTime      @default(now())
+
+  authorId            String
+  author              User          @relation(fields: [authorId], references: [id])
+  comments            Comment[]
+}
+
+model Comment {
+  id               String         @id @default(cuid())
+  body             String
+  createdAt        DateTime       @default(now())
+
+  authorId         String
+  author           User           @relation(fields: [authorId], references: [id])
+
+  topicId          String?
+  topic            Topic?         @relation(fields: [topicId], references: [id])
+
+  offerId          String?
+  offer            Offer?         @relation(fields: [offerId], references: [id])
+
+  dashboardId      String?
+  dashboard        Dashboard?     @relation(fields: [dashboardId], references: [id])
+
+  wikiPageId       String?
+  wikiPage         WikiPage?      @relation(fields: [wikiPageId], references: [id])
+
+  leadershipPostId String?
+  leadershipPost   LeadershipPost? @relation(fields: [leadershipPostId], references: [id])
+
+  parentId         String?
+  parent           Comment?       @relation("CommentThread", fields: [parentId], references: [id])
+  replies          Comment[]      @relation("CommentThread")
+}
+
+model Rating {
+  id          String     @id @default(cuid())
+  targetType  TargetType
+  targetId    String
+  value       Int
+  createdAt   DateTime   @default(now())
+
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+
+  @@index([targetType, targetId])
+}
+
+model Reaction {
+  id          String       @id @default(cuid())
+  targetType  TargetType
+  targetId    String
+  reaction    ReactionType
+  createdAt   DateTime     @default(now())
+
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+
+  @@index([targetType, targetId])
+}
+
+model Bookmark {
+  id          String      @id @default(cuid())
+  targetType  TargetType
+  targetId    String
+  createdAt   DateTime    @default(now())
+
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@index([targetType, targetId])
+}
+
+model WikiPage {
+  id                String          @id @default(cuid())
+  slug              String          @unique
+  title             String
+  tags              String
+  body              String
+  needsReview       Boolean         @default(false)
+  featuredHome      Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  authorId          String
+  author            User            @relation(fields: [authorId], references: [id])
+
+  revisions         WikiRevision[]
+  comments          Comment[]
+}
+
+model WikiRevision {
+  id              String      @id @default(cuid())
+  revisionNumber  Int
+  titleSnapshot   String
+  tagsSnapshot    String
+  bodySnapshot    String
+  summary         String
+  createdAt       DateTime    @default(now())
+
+  editorId        String
+  editor          User        @relation(fields: [editorId], references: [id])
+
+  wikiPageId      String
+  wikiPage        WikiPage    @relation(fields: [wikiPageId], references: [id])
+}
+
+model Offer {
+  id                    String       @id @default(cuid())
+  slug                  String       @unique
+  name                  String
+  eligibility           String
+  solutionPlay          SolutionPlay
+  stage                 String
+  fundingType           String
+  roiNotes              String
+  owner                 String
+  talkTrack             String
+  nominationSteps       String
+  requiredArtifacts     String
+  faq                   String
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  comments              Comment[]
+}
+
+model Dashboard {
+  id               String       @id @default(cuid())
+  slug             String       @unique
+  name             String
+  description      String
+  owner            String
+  tags             String
+  url              String
+  createdAt        DateTime     @default(now())
+
+  comments         Comment[]
+}
+
+model LeadershipPost {
+  id               String       @id @default(cuid())
+  title            String
+  summary          String
+  body             String
+  emphasisBullets  String
+  callToAction     String
+  featured         Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  authorId         String
+  author           User         @relation(fields: [authorId], references: [id])
+
+  comments         Comment[]
+}
+
+model Event {
+  id               String       @id @default(cuid())
+  title            String
+  description      String
+  startsAt         DateTime
+  roleAudience     String
+  eventType        String
+  createdAt        DateTime     @default(now())
+}
+
+model LayoutConfig {
+  id              String      @id @default(cuid())
+  pageKey         String      @unique
+  title           String
+  blocks          Json
+  updatedAt       DateTime    @updatedAt
+}

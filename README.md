@@ -1,88 +1,53 @@
-# CAIP-MissionControl
-CAIP Mission Control Panel to manage Everyday SSP tasks
+# CAIP Mission Control
 
-from pathlib import Path
+CAIP Mission Control is an internal Build-style field enablement hub for SSPs and SEs.
 
-readme = r"""# CAIP Mission Control
+## Stack
+- Next.js 16 (App Router) + TypeScript
+- Tailwind CSS
+- shadcn-style UI components + Radix primitives
+- Prisma + SQLite
+- lucide-react
+- recharts
 
-**CAIP Mission Control** is an internal, Build‑style enablement and execution hub for **SSPs** and **SEs**. It’s designed to be a **single pane of glass** to:
+## Run locally
+1. Install dependencies:
+   npm install
+2. Generate Prisma client:
+   npm run prisma:generate
+3. Push schema to SQLite:
+   npm run prisma:push
+4. Seed realistic mock content:
+   npm run prisma:seed
+5. Run app:
+   npm run dev
 
-- Stay aligned to **leadership priorities** and weekly Top‑of‑Mind
-- Discover **trending field topics** and best practices
-- Collaborate in a **wiki-like knowledge base** with revision history
-- Find the right **Programs & Offers** fast (Navigator/AFO/ECIF/ACO/Factory)
-- Jump into **dashboards** and execution tooling quickly
+## Core routes
+- / (Build-style Home)
+- /community
+- /wiki
+- /offers
+- /dashboards
+- /plays
+- /leadership
+- /about
+- /search
 
-> The site’s IA and seed content are grounded in CAIP’s mission and field execution emphasis as described in <File>Cloud & AI Platforms.aspx</File> and your own weekly recap format in <File>friday-recap-2026-03-17.html</File>. citeturn3search225turn3search226
-
----
-
-## ✨ Key Features
-
-### Build-style Homepage
-A modern landing experience inspired by Microsoft Build:
-- Big hero + “Now shipping” strip
-- Featured and trending content cards
-- Upcoming agenda / enablement calendar blocks
-- Leadership Top‑of‑Mind hero module
-
-### Community Hub
-- Create and browse Topics/Posts
-- **Ratings (1–5)**, reactions, bookmarks
+## Data model highlights
+- Users (mock field personas and moderation roles)
+- Topics
 - Threaded comments
-- Trending and personalization by role (SSP/SE/CSA)
-
-### Collaborative Wiki (Modular + Versioned)
-- Markdown editor (MD/MDX)
-- Block inserts (Tip/Warning/Checklist/LinkList)
-- Revision history + diff viewer + restore
-- Quality signals: rating, contributors, last updated, “needs review”
-
-### Programs & Offers Finder
-- Offer catalog with filters (Play, pre/post-sales, ROI notes)
-- Offer detail pages with positioning + nomination checklist
-- Community tips/gotchas on each offer
-
-### Dashboards Hub
-- Curated dashboard cards by category
-- Copy link + bookmark
-- Comment threads (e.g., “best filters”, “where to find X”)
-
-### Leadership “Top of Mind”
-A dedicated page for:
-- Monthly priorities
-- Field calls to action
-- Community feedback loop (“I need help applying this”)
-
----
-
-## 🧱 Architecture Overview
-
-### Tech Stack
-- **Next.js (App Router)** + **TypeScript**
-- **Tailwind CSS**
-- **shadcn/ui** components
-- **lucide-react** icons
-- **recharts** for charts
-- **Prisma + SQLite** for MVP persistence
-
-### Data Model (MVP)
-- Users (mock)
-- Topics / Posts / Articles
-- Comments (threaded)
 - Ratings
-- Reactions / Bookmarks
-- WikiPages + Revisions
-- Featured content + Layout blocks
+- Reactions + bookmarks
+- Wiki pages + revision history
+- Offers catalog
+- Dashboards
+- Leadership posts
+- LayoutConfig JSON blocks for modular page composition
 
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+ (recommended 20+)
-- npm (or pnpm/yarn)
-
-### Install
-```bash
-npm install
+## Notes
+- Trending score formula is implemented as:
+  (reactions*2 + comments*3 + avgRating*4) * recencyBoost
+- recencyBoost decays over 14 days.
+- Home and Leadership are layout-driven through JSON blocks in LayoutConfig.
+- Auth is mocked with a user switcher and designed for future Entra/MSAL wiring.

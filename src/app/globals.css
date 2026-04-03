@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+:root {
+  --background: #1a1a1a;
+  --foreground: #e5e5e5;
+  --build-blue: #0078D4;
+  --build-blue-hover: #106EBE;
+  --build-cyan: #50E6FF;
+  --build-green: #00CC6A;
+  --build-yellow: #FFB900;
+  --build-magenta: #E3008C;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-lexend);
+  --font-mono: var(--font-space-mono);
+}
+
+* {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-lexend), sans-serif;
+}
+
+::selection {
+  background: rgba(0, 120, 212, 0.4);
+  color: #fff;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
