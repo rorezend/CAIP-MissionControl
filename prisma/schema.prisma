@@ -70,6 +70,7 @@ model User {
   reactions          Reaction[]
   bookmarks          Bookmark[]
   revisions          WikiRevision[]
+  briefings          Briefing[]
 }
 
 model Topic {
@@ -258,4 +259,54 @@ model LayoutConfig {
   title           String
   blocks          Json
   updatedAt       DateTime    @updatedAt
+}
+
+// ── Mission Briefings Module ──────────────────────────────────
+
+enum BriefingType {
+  INTERNAL
+  CUSTOMER_FACING
+}
+
+enum BriefingStatus {
+  GENERATING
+  DRAFT
+  REVIEWED
+  EXPORTED
+  FAILED
+}
+
+model Briefing {
+  id              String          @id @default(cuid())
+  tpid            String
+  accountName     String
+  briefingType    BriefingType
+  status          BriefingStatus  @default(GENERATING)
+  htmlContent     String          @default("")
+  metadata        String          @default("{}")
+  errorMessage    String?
+  generatedAt     DateTime        @default(now())
+  reviewedAt      DateTime?
+  exportedAt      DateTime?
+
+  createdById     String
+  createdBy       User            @relation(fields: [createdById], references: [id])
+
+  sections        BriefingSection[]
+
+  @@index([tpid])
+  @@index([createdById])
+}
+
+model BriefingSection {
+  id              String      @id @default(cuid())
+  briefingId      String
+  briefing        Briefing    @relation(fields: [briefingId], references: [id], onDelete: Cascade)
+  sectionKey      String
+  title           String
+  content         String      @default("")
+  ragStatus       String?
+  sortOrder       Int         @default(0)
+
+  @@index([briefingId])
 }
