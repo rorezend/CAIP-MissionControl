@@ -15,7 +15,7 @@ export async function GET() {
 // POST /api/briefings — create a new briefing
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { tpid, briefingType } = body;
+  const { tpid, industry, briefingType } = body;
 
   if (!tpid || !briefingType) {
     return NextResponse.json(
@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!["INTERNAL", "CUSTOMER_FACING"].includes(briefingType)) {
+  if (!["INTERNAL", "CUSTOMER_FACING", "BOTH"].includes(briefingType)) {
     return NextResponse.json(
-      { error: "briefingType must be INTERNAL or CUSTOMER_FACING" },
+      { error: "briefingType must be INTERNAL, CUSTOMER_FACING, or BOTH" },
       { status: 400 }
     );
   }
@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
     data: {
       tpid: String(tpid),
       accountName: `Account TPID ${tpid}`, // Will be resolved by the engine
-      briefingType: briefingType as "INTERNAL" | "CUSTOMER_FACING",
+      industry: industry || "",
+      briefingType: briefingType as "INTERNAL" | "CUSTOMER_FACING" | "BOTH",
       status: "GENERATING",
       createdById: user.id,
     },
@@ -62,15 +63,30 @@ export async function POST(request: NextRequest) {
           { sectionKey: "pipeline", title: "Pipeline & Execution Health", sortOrder: 3 },
           { sectionKey: "action_tracker", title: "Action Tracker", sortOrder: 4 },
         ]
-      : [
-          { sectionKey: "exec_summary", title: "Executive Summary", sortOrder: 0 },
-          { sectionKey: "kpi_scorecard", title: "KPI Scorecard", sortOrder: 1 },
-          { sectionKey: "root_cause", title: "Consumption Trend – Root Cause View", sortOrder: 2 },
-          { sectionKey: "peer_comparison", title: "Industry Context: CPG Peer Indicators", sortOrder: 3 },
-          { sectionKey: "risks_opps", title: "Key Risks & Opportunities", sortOrder: 4 },
-          { sectionKey: "action_plan", title: "Action Plan", sortOrder: 5 },
-          { sectionKey: "forward_looking", title: "Looking Ahead", sortOrder: 6 },
-        ];
+      : briefingType === "CUSTOMER_FACING"
+        ? [
+            { sectionKey: "exec_summary", title: "Executive Summary", sortOrder: 0 },
+            { sectionKey: "kpi_scorecard", title: "KPI Scorecard", sortOrder: 1 },
+            { sectionKey: "root_cause", title: "Consumption Trend – Root Cause View", sortOrder: 2 },
+            { sectionKey: "peer_comparison", title: "Industry Context: Peer Indicators", sortOrder: 3 },
+            { sectionKey: "risks_opps", title: "Key Risks & Opportunities", sortOrder: 4 },
+            { sectionKey: "action_plan", title: "Action Plan", sortOrder: 5 },
+            { sectionKey: "forward_looking", title: "Looking Ahead", sortOrder: 6 },
+          ]
+        : [
+            // BOTH — combined sections
+            { sectionKey: "exec_summary_internal", title: "Executive Summary (Internal)", sortOrder: 0 },
+            { sectionKey: "kpi_rag", title: "ACR → KPI → Executive Message", sortOrder: 1 },
+            { sectionKey: "root_cause_internal", title: "ACR Decline Root Cause (SL4 → SL2)", sortOrder: 2 },
+            { sectionKey: "pipeline", title: "Pipeline & Execution Health", sortOrder: 3 },
+            { sectionKey: "action_tracker", title: "Action Tracker", sortOrder: 4 },
+            { sectionKey: "exec_summary_external", title: "Executive Summary (Customer-Facing)", sortOrder: 10 },
+            { sectionKey: "kpi_scorecard", title: "KPI Scorecard", sortOrder: 11 },
+            { sectionKey: "root_cause_external", title: "Consumption Trend – Root Cause View", sortOrder: 12 },
+            { sectionKey: "peer_comparison", title: "Industry Context: Peer Indicators", sortOrder: 13 },
+            { sectionKey: "risks_opps", title: "Key Risks & Opportunities", sortOrder: 14 },
+            { sectionKey: "forward_looking", title: "Looking Ahead", sortOrder: 15 },
+          ];
 
   await prisma.briefingSection.createMany({
     data: sectionDefs.map((s) => ({

@@ -266,6 +266,7 @@ model LayoutConfig {
 enum BriefingType {
   INTERNAL
   CUSTOMER_FACING
+  BOTH
 }
 
 enum BriefingStatus {
@@ -280,6 +281,7 @@ model Briefing {
   id              String          @id @default(cuid())
   tpid            String
   accountName     String
+  industry        String          @default("")
   briefingType    BriefingType
   status          BriefingStatus  @default(GENERATING)
   htmlContent     String          @default("")

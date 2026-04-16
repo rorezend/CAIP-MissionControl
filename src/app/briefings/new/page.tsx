@@ -2,7 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, FileText, Users, Loader2 } from "lucide-react";
+import { ArrowRight, FileText, Users, Layers, Loader2 } from "lucide-react";
+
+const industries = [
+  "CPG / Retail",
+  "Financial Services",
+  "Healthcare & Life Sciences",
+  "Manufacturing",
+  "Energy & Utilities",
+  "Media & Entertainment",
+  "Technology / ISV",
+  "Public Sector",
+  "Other",
+];
 
 const templates = [
   {
@@ -11,8 +23,9 @@ const templates = [
     description:
       "Full MSFT-internal pack with raw ACR data, pipeline details, RAG scoring, SL2 root cause analysis, and action tracker.",
     icon: FileText,
-    color: "border-blue-500/30 hover:border-blue-500/60",
     accent: "text-blue-400",
+    borderSelected: "border-blue-500/60 bg-blue-500/[0.06]",
+    borderDefault: "border-white/8 hover:border-blue-500/30",
   },
   {
     id: "CUSTOMER_FACING",
@@ -20,20 +33,34 @@ const templates = [
     description:
       "Executive-ready briefing with anonymized peer benchmarking, infographic KPI cards, forward-looking AI themes, and transparency notes.",
     icon: Users,
-    color: "border-emerald-500/30 hover:border-emerald-500/60",
     accent: "text-emerald-400",
+    borderSelected: "border-emerald-500/60 bg-emerald-500/[0.06]",
+    borderDefault: "border-white/8 hover:border-emerald-500/30",
+  },
+  {
+    id: "BOTH",
+    title: "Both Reports",
+    description:
+      "Generate internal and customer-facing briefings in a single run. Same data collection, two output formats.",
+    icon: Layers,
+    accent: "text-amber-400",
+    borderSelected: "border-amber-500/60 bg-amber-500/[0.06]",
+    borderDefault: "border-white/8 hover:border-amber-500/30",
   },
 ];
 
 export default function NewBriefingPage() {
   const router = useRouter();
   const [tpid, setTpid] = useState("");
+  const [industry, setIndustry] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isReady = tpid.trim() && industry && selectedTemplate;
+
   async function handleGenerate() {
-    if (!tpid.trim() || !selectedTemplate) return;
+    if (!isReady) return;
     setLoading(true);
     setError(null);
 
@@ -43,6 +70,7 @@ export default function NewBriefingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tpid: tpid.trim(),
+          industry,
           briefingType: selectedTemplate,
         }),
       });
@@ -65,7 +93,7 @@ export default function NewBriefingPage() {
       <div>
         <h1 className="text-2xl font-bold text-white">New Mission Briefing</h1>
         <p className="mt-1 text-sm text-neutral-400">
-          Enter a customer TPID and select a briefing template to generate an AI-powered QBR.
+          Enter a customer TPID, select the industry vertical, and choose the report type.
         </p>
       </div>
 
@@ -87,10 +115,35 @@ export default function NewBriefingPage() {
         </p>
       </div>
 
-      {/* Template Selector */}
+      {/* Industry / Vertical Selector */}
+      <div className="space-y-2">
+        <label htmlFor="industry" className="block text-sm font-medium text-neutral-300">
+          Industry / Vertical
+        </label>
+        <select
+          id="industry"
+          value={industry}
+          onChange={(e) => setIndustry(e.target.value)}
+          className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white focus:border-[#50E6FF]/50 focus:outline-none focus:ring-1 focus:ring-[#50E6FF]/50"
+        >
+          <option value="" className="bg-neutral-900 text-neutral-500">
+            Select industry…
+          </option>
+          {industries.map((ind) => (
+            <option key={ind} value={ind} className="bg-neutral-900 text-white">
+              {ind}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-neutral-500">
+          Used for peer benchmarking context in the customer-facing report.
+        </p>
+      </div>
+
+      {/* Report Type Selector */}
       <div className="space-y-3">
-        <label className="block text-sm font-medium text-neutral-300">Briefing Template</label>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-neutral-300">Report Type</label>
+        <div className="grid gap-4 sm:grid-cols-3">
           {templates.map((t) => {
             const Icon = t.icon;
             const isSelected = selectedTemplate === t.id;
@@ -100,12 +153,10 @@ export default function NewBriefingPage() {
                 type="button"
                 onClick={() => setSelectedTemplate(t.id)}
                 className={`flex flex-col items-start rounded-xl border-2 p-5 text-left transition ${
-                  isSelected
-                    ? "border-[#50E6FF]/60 bg-[#50E6FF]/[0.06]"
-                    : `border-white/8 bg-white/[0.02] ${t.color}`
+                  isSelected ? t.borderSelected : `bg-white/[0.02] ${t.borderDefault}`
                 }`}
               >
-                <Icon className={`h-6 w-6 ${isSelected ? "text-[#50E6FF]" : t.accent}`} />
+                <Icon className={`h-6 w-6 ${isSelected ? t.accent : "text-neutral-500"}`} />
                 <h3 className="mt-3 text-sm font-semibold text-white">{t.title}</h3>
                 <p className="mt-1 text-xs leading-relaxed text-neutral-400">{t.description}</p>
               </button>
@@ -125,7 +176,7 @@ export default function NewBriefingPage() {
       <button
         type="button"
         onClick={handleGenerate}
-        disabled={!tpid.trim() || !selectedTemplate || loading}
+        disabled={!isReady || loading}
         className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#50E6FF] px-6 py-3 text-sm font-semibold text-[#1a1a1a] transition hover:bg-[#50E6FF]/80 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {loading ? (
