@@ -10,6 +10,7 @@ import { mockCollectors } from "./collectors-mock";
 import { SYSTEM_PROMPT_INTERNAL, SYSTEM_PROMPT_CUSTOMER_FACING, buildUserPrompt } from "./prompts";
 import { renderBriefingHtml } from "./html-renderer";
 import type { AuthContext, DataCollectors, CollectorResult } from "./types";
+import type { BriefingMetrics } from "./html-renderer";
 
 const collectors: DataCollectors = mockCollectors;
 
@@ -126,7 +127,37 @@ export async function generateBriefing(briefingId: string): Promise<void> {
       }
     }
 
-    // ── Step 4: Render HTML ──
+    // ── Step 4: Build metrics for visual dashboard ──
+    const metrics: BriefingMetrics = {};
+
+    if (acrResult.status === "ok" && acrResult.data) {
+      metrics.acr = {
+        current: acrResult.data.current,
+        growth6M: acrResult.data.growthRate6M,
+        growth3M: acrResult.data.growthRate3M,
+        trend: acrResult.data.trend.map((t) => ({ month: t.month, acr: t.acr, target: t.target })),
+        topServices: acrResult.data.topServices,
+      };
+    }
+
+    if (pipelineResult.status === "ok" && pipelineResult.data) {
+      metrics.pipeline = {
+        totalValue: pipelineResult.data.totalValue,
+        committedValue: pipelineResult.data.committedValue,
+        uncommittedValue: pipelineResult.data.uncommittedValue,
+        stages: pipelineResult.data.stageSummary,
+      };
+    }
+
+    if (workplaceResult.status === "ok" && workplaceResult.data) {
+      metrics.engagement = {
+        meetingCount: workplaceResult.data.recentMeetings.length,
+        openActions: workplaceResult.data.openActions.length,
+        riskCount: workplaceResult.data.risks.length,
+      };
+    }
+
+    // ── Step 5: Render HTML ──
     const updatedSections = await prisma.briefingSection.findMany({
       where: { briefingId },
       orderBy: { sortOrder: "asc" },
@@ -145,10 +176,11 @@ export async function generateBriefing(briefingId: string): Promise<void> {
         briefingType: briefing.briefingType as "INTERNAL" | "CUSTOMER_FACING" | "BOTH",
         generatedAt: new Date().toISOString(),
         sources: allSources,
+        metrics,
       }
     );
 
-    // ── Step 5: Finalize ──
+    // ── Step 6: Finalize ──
     await prisma.briefing.update({
       where: { id: briefingId },
       data: {
