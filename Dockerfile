@@ -40,10 +40,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy Prisma schema + migrations for runtime
-COPY --from=builder /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-# Copy pre-initialized SQLite database
+# Copy pre-initialized SQLite database (nextjs needs write access for WAL/journal)
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/dev.db ./prisma/dev.db
 
 USER nextjs
