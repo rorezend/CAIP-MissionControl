@@ -19,8 +19,9 @@ RUN npx prisma generate
 # Build Next.js (server mode, not static export)
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DEPLOY_TARGET=azure
-# Dummy DATABASE_URL for build-time Prisma validation (overridden at runtime)
+# SQLite for build + runtime (ephemeral per container)
 ENV DATABASE_URL="file:./dev.db"
+RUN npx prisma db push --skip-generate
 RUN npm run build
 
 # --- Runner ---
@@ -42,10 +43,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Copy pre-initialized SQLite database
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/dev.db ./prisma/dev.db
 
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+ENV DATABASE_URL="file:./prisma/dev.db"
 
 CMD ["node", "server.js"]
