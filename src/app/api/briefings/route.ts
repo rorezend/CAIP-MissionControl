@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { generateBriefing } from "@/lib/briefing-engine/orchestrator";
 
 // GET /api/briefings — list all briefings
 export async function GET() {
@@ -12,7 +13,7 @@ export async function GET() {
   return NextResponse.json(briefings);
 }
 
-// POST /api/briefings — create a new briefing
+// POST /api/briefings — create and trigger async generation (returns 202)
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { tpid, industry, briefingType } = body;
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
   const briefing = await prisma.briefing.create({
     data: {
       tpid: String(tpid),
-      accountName: `Account TPID ${tpid}`, // Will be resolved by the engine
+      accountName: `Account TPID ${tpid}`,
       industry: industry || "",
       briefingType: briefingType as "INTERNAL" | "CUSTOMER_FACING" | "BOTH",
       status: "GENERATING",
@@ -52,14 +53,13 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // TODO: Trigger async briefing generation engine here
-  // For now, create placeholder sections and mark as DRAFT
+  // Create placeholder sections
   const sectionDefs =
     briefingType === "INTERNAL"
       ? [
           { sectionKey: "exec_summary", title: "Executive Summary", sortOrder: 0 },
-          { sectionKey: "kpi_rag", title: "ACR → KPI → Executive Message", sortOrder: 1 },
-          { sectionKey: "root_cause", title: "ACR Decline Root Cause (SL4 → SL2)", sortOrder: 2 },
+          { sectionKey: "kpi_rag", title: "ACR \u2192 KPI \u2192 Executive Message", sortOrder: 1 },
+          { sectionKey: "root_cause", title: "ACR Decline Root Cause (SL4 \u2192 SL2)", sortOrder: 2 },
           { sectionKey: "pipeline", title: "Pipeline & Execution Health", sortOrder: 3 },
           { sectionKey: "action_tracker", title: "Action Tracker", sortOrder: 4 },
         ]
@@ -67,22 +67,21 @@ export async function POST(request: NextRequest) {
         ? [
             { sectionKey: "exec_summary", title: "Executive Summary", sortOrder: 0 },
             { sectionKey: "kpi_scorecard", title: "KPI Scorecard", sortOrder: 1 },
-            { sectionKey: "root_cause", title: "Consumption Trend – Root Cause View", sortOrder: 2 },
+            { sectionKey: "root_cause", title: "Consumption Trend \u2013 Root Cause View", sortOrder: 2 },
             { sectionKey: "peer_comparison", title: "Industry Context: Peer Indicators", sortOrder: 3 },
             { sectionKey: "risks_opps", title: "Key Risks & Opportunities", sortOrder: 4 },
             { sectionKey: "action_plan", title: "Action Plan", sortOrder: 5 },
             { sectionKey: "forward_looking", title: "Looking Ahead", sortOrder: 6 },
           ]
         : [
-            // BOTH — combined sections
             { sectionKey: "exec_summary_internal", title: "Executive Summary (Internal)", sortOrder: 0 },
-            { sectionKey: "kpi_rag", title: "ACR → KPI → Executive Message", sortOrder: 1 },
-            { sectionKey: "root_cause_internal", title: "ACR Decline Root Cause (SL4 → SL2)", sortOrder: 2 },
+            { sectionKey: "kpi_rag", title: "ACR \u2192 KPI \u2192 Executive Message", sortOrder: 1 },
+            { sectionKey: "root_cause_internal", title: "ACR Decline Root Cause (SL4 \u2192 SL2)", sortOrder: 2 },
             { sectionKey: "pipeline", title: "Pipeline & Execution Health", sortOrder: 3 },
             { sectionKey: "action_tracker", title: "Action Tracker", sortOrder: 4 },
             { sectionKey: "exec_summary_external", title: "Executive Summary (Customer-Facing)", sortOrder: 10 },
             { sectionKey: "kpi_scorecard", title: "KPI Scorecard", sortOrder: 11 },
-            { sectionKey: "root_cause_external", title: "Consumption Trend – Root Cause View", sortOrder: 12 },
+            { sectionKey: "root_cause_external", title: "Consumption Trend \u2013 Root Cause View", sortOrder: 12 },
             { sectionKey: "peer_comparison", title: "Industry Context: Peer Indicators", sortOrder: 13 },
             { sectionKey: "risks_opps", title: "Key Risks & Opportunities", sortOrder: 14 },
             { sectionKey: "forward_looking", title: "Looking Ahead", sortOrder: 15 },
@@ -92,15 +91,18 @@ export async function POST(request: NextRequest) {
     data: sectionDefs.map((s) => ({
       briefingId: briefing.id,
       ...s,
-      content: "Pending generation — connect MCP data sources to populate this section.",
+      content: "\u23f3 Generating\u2026",
     })),
   });
 
-  // Mark as DRAFT (placeholder until async engine is wired)
-  const updated = await prisma.briefing.update({
-    where: { id: briefing.id },
-    data: { status: "DRAFT" },
+  // Fire-and-forget: trigger async generation
+  generateBriefing(briefing.id).catch((err) => {
+    console.error(`Briefing generation failed for ${briefing.id}:`, err);
   });
 
-  return NextResponse.json(updated, { status: 201 });
+  // Return 202 Accepted with briefing ID for polling
+  return NextResponse.json(
+    { id: briefing.id, status: "GENERATING", pollUrl: `/api/briefings/${briefing.id}` },
+    { status: 202 }
+  );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Lexend, Space_Mono } from "next/font/google";
 
 import { TopNav } from "@/components/layout/top-nav";
+import { AuthProvider } from "@/components/providers/auth-provider";
 import "./globals.css";
 
 const lexend = Lexend({
@@ -31,8 +32,10 @@ export default function RootLayout({
       className={`${lexend.variable} ${spaceMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-[#1a1a1a] text-neutral-200">
-        <TopNav />
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
+        <AuthProvider>
+          <TopNav />
+          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,27 +1,91 @@
-import Link from "next/link";
-import { ArrowLeft, Download, RefreshCw, Clock } from "lucide-react";
-import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+"use client";
 
-interface Props {
-  params: Promise<{ id: string }>;
+import { useEffect, useState, useCallback } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Download, Clock, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+
+interface BriefingSection {
+  id: string;
+  sectionKey: string;
+  title: string;
+  content: string;
+  ragStatus: string | null;
+  sortOrder: number;
 }
 
-export default async function BriefingDetailPage({ params }: Props) {
-  const { id } = await params;
+interface Briefing {
+  id: string;
+  tpid: string;
+  accountName: string;
+  industry: string;
+  briefingType: string;
+  status: string;
+  htmlContent: string;
+  errorMessage: string | null;
+  generatedAt: string;
+  createdBy: { displayName: string };
+  sections: BriefingSection[];
+}
 
-  const briefing = await prisma.briefing.findUnique({
-    where: { id },
-    include: {
-      createdBy: true,
-      sections: { orderBy: { sortOrder: "asc" } },
-    },
-  });
+const statusConfig: Record<string, { icon: typeof Clock; color: string; label: string }> = {
+  GENERATING: { icon: Loader2, color: "text-blue-400", label: "Generating" },
+  DRAFT: { icon: CheckCircle, color: "text-emerald-400", label: "Draft Ready" },
+  REVIEWED: { icon: CheckCircle, color: "text-green-400", label: "Reviewed" },
+  EXPORTED: { icon: CheckCircle, color: "text-cyan-400", label: "Exported" },
+  FAILED: { icon: AlertTriangle, color: "text-red-400", label: "Failed" },
+};
 
-  if (!briefing) notFound();
+export default function BriefingDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const [briefing, setBriefing] = useState<Briefing | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const typeLabel = briefing.briefingType === "INTERNAL" ? "Internal QBR" : "Customer-Facing Executive QBR";
-  const isReady = briefing.status === "DRAFT" || briefing.status === "REVIEWED" || briefing.status === "EXPORTED";
+  const fetchBriefing = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/briefings/${id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setBriefing(data);
+      setLoading(false);
+    } catch {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchBriefing();
+  }, [fetchBriefing]);
+
+  // Poll every 2s while generating
+  useEffect(() => {
+    if (!briefing || briefing.status !== "GENERATING") return;
+    const interval = setInterval(fetchBriefing, 2000);
+    return () => clearInterval(interval);
+  }, [briefing?.status, fetchBriefing]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-[#50E6FF]" />
+      </div>
+    );
+  }
+
+  if (!briefing) {
+    return <div className="py-20 text-center text-neutral-500">Briefing not found.</div>;
+  }
+
+  const typeLabel =
+    briefing.briefingType === "INTERNAL"
+      ? "Internal QBR"
+      : briefing.briefingType === "CUSTOMER_FACING"
+        ? "Customer-Facing Executive QBR"
+        : "Internal + Customer-Facing QBR";
+
+  const isReady = ["DRAFT", "REVIEWED", "EXPORTED"].includes(briefing.status);
+  const StatusIcon = statusConfig[briefing.status]?.icon || Clock;
+  const statusColor = statusConfig[briefing.status]?.color || "text-neutral-400";
 
   return (
     <div className="space-y-6">
@@ -37,20 +101,19 @@ export default async function BriefingDetailPage({ params }: Props) {
           </Link>
           <h1 className="text-2xl font-bold text-white">{briefing.accountName}</h1>
           <p className="mt-1 text-sm text-neutral-400">
-            TPID {briefing.tpid} · {typeLabel} · Generated{" "}
-            {briefing.generatedAt.toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+            TPID {briefing.tpid} &middot; {briefing.industry} &middot; {typeLabel}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${statusColor}`}>
+            <StatusIcon className={`h-4 w-4 ${briefing.status === "GENERATING" ? "animate-spin" : ""}`} />
+            {statusConfig[briefing.status]?.label || briefing.status}
+          </span>
           {isReady && (
             <a
               href={`/api/briefings/${briefing.id}?format=html`}
               download={`qbr-${briefing.accountName.toLowerCase().replace(/\s+/g, "-")}.html`}
-              className="inline-flex items-center gap-2 rounded-lg bg-white/8 px-4 py-2 text-sm text-neutral-200 transition hover:bg-white/12"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#50E6FF] px-4 py-2 text-sm font-semibold text-[#1a1a1a] transition hover:bg-[#50E6FF]/80"
             >
               <Download className="h-4 w-4" />
               Export HTML
@@ -59,16 +122,45 @@ export default async function BriefingDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Status Banner */}
+      {/* Generating Progress */}
       {briefing.status === "GENERATING" && (
-        <div className="flex items-center gap-3 rounded-lg border border-blue-500/20 bg-blue-500/[0.06] px-4 py-3">
-          <RefreshCw className="h-4 w-4 animate-spin text-blue-400" />
-          <p className="text-sm text-blue-300">
-            Briefing is being generated. This may take a few minutes…
-          </p>
+        <div className="rounded-xl border border-blue-500/20 bg-blue-500/[0.04] p-6">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="h-10 w-10 rounded-full border-2 border-blue-500/30" />
+              <Loader2 className="absolute inset-0 m-auto h-5 w-5 animate-spin text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-blue-300">Generating your briefing&hellip;</p>
+              <p className="text-xs text-blue-400/60">
+                Collecting data and building sections. This may take 30&ndash;60 seconds.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {briefing.sections.map((section) => {
+              const isDone = section.content && !section.content.includes("\u23f3");
+              return (
+                <div
+                  key={section.id}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
+                    isDone ? "bg-emerald-500/10 text-emerald-400" : "bg-white/[0.03] text-neutral-500"
+                  }`}
+                >
+                  {isDone ? (
+                    <CheckCircle className="h-3 w-3 shrink-0" />
+                  ) : (
+                    <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+                  )}
+                  <span className="truncate">{section.title}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
+      {/* Failed Banner */}
       {briefing.status === "FAILED" && (
         <div className="rounded-lg border border-red-500/20 bg-red-500/[0.06] px-4 py-3 text-sm text-red-400">
           Generation failed: {briefing.errorMessage || "Unknown error"}
@@ -79,10 +171,7 @@ export default async function BriefingDetailPage({ params }: Props) {
       {isReady && briefing.sections.length > 0 && (
         <div className="space-y-6">
           {briefing.sections.map((section) => (
-            <div
-              key={section.id}
-              className="rounded-xl border border-white/8 bg-white/[0.02] p-6"
-            >
+            <div key={section.id} className="rounded-xl border border-white/8 bg-white/[0.02] p-6">
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-semibold text-white">{section.title}</h2>
                 {section.ragStatus && (
@@ -101,7 +190,7 @@ export default async function BriefingDetailPage({ params }: Props) {
                   </span>
                 )}
               </div>
-              <div className="prose prose-invert mt-4 max-w-none text-sm text-neutral-300">
+              <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-neutral-300">
                 {section.content}
               </div>
             </div>
@@ -113,12 +202,12 @@ export default async function BriefingDetailPage({ params }: Props) {
       {isReady && briefing.htmlContent && (
         <details className="group rounded-xl border border-white/8 bg-white/[0.02]">
           <summary className="cursor-pointer px-6 py-4 text-sm font-semibold text-neutral-300 transition hover:text-white">
-            Preview Full HTML Report
+            &#9654; Preview Full HTML Report
           </summary>
           <div className="border-t border-white/8 p-1">
             <iframe
               srcDoc={briefing.htmlContent}
-              className="h-[600px] w-full rounded-lg bg-white"
+              className="h-[700px] w-full rounded-lg"
               title="Briefing Preview"
               sandbox=""
             />
@@ -129,9 +218,9 @@ export default async function BriefingDetailPage({ params }: Props) {
       {/* Metadata */}
       <div className="rounded-xl border border-white/5 bg-white/[0.01] px-6 py-4">
         <p className="text-xs text-neutral-600">
-          Created by {briefing.createdBy.displayName} ·{" "}
+          Created by {briefing.createdBy.displayName} &middot;{" "}
           <Clock className="inline h-3 w-3" />{" "}
-          {briefing.generatedAt.toLocaleString()}
+          {new Date(briefing.generatedAt).toLocaleString()}
         </p>
       </div>
     </div>
