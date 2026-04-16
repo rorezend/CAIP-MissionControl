@@ -1,15 +1,16 @@
 FROM node:20-alpine AS base
 
-# --- Dependencies ---
+# --- Dependencies (production only for final image) ---
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-# --- Builder ---
+# --- Builder (needs all deps including devDependencies for build) ---
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
 
 # Generate Prisma client
@@ -17,6 +18,9 @@ RUN npx prisma generate
 
 # Build Next.js (server mode, not static export)
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DEPLOY_TARGET=azure
+# Dummy DATABASE_URL for build-time Prisma validation (overridden at runtime)
+ENV DATABASE_URL="file:./dev.db"
 RUN npm run build
 
 # --- Runner ---
