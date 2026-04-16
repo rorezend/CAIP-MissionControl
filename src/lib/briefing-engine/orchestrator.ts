@@ -6,13 +6,14 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { mockCollectors } from "./collectors-mock";
+import { getCollectors } from "./collectors";
 import { SYSTEM_PROMPT_INTERNAL, SYSTEM_PROMPT_CUSTOMER_FACING, buildUserPrompt } from "./prompts";
 import { renderBriefingHtml } from "./html-renderer";
-import type { AuthContext, DataCollectors, CollectorResult } from "./types";
+import type { AuthContext } from "./types";
 import type { BriefingMetrics } from "./html-renderer";
 
-const collectors: DataCollectors = mockCollectors;
+// Collectors are resolved at generation time based on available credentials
+
 
 // Section key mappings per briefing type
 const SECTION_KEYS = {
@@ -45,6 +46,7 @@ export async function generateBriefing(briefingId: string): Promise<void> {
     };
 
     // ── Step 1: Collect data from all sources in parallel ──
+    const collectors = getCollectors();
     const [accountResult, acrResult, pipelineResult, workplaceResult] = await Promise.all([
       collectors.collectAccountInfo(briefing.tpid, auth),
       collectors.collectACRData(briefing.tpid, auth),
