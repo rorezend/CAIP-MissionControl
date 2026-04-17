@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCommunityFeed } from "@/lib/data";
 
+export const dynamic = 'force-dynamic';
+
 const categories = [
   "AI_DATA_GO_BIG",
   "OFFERS_PROGRAMS",

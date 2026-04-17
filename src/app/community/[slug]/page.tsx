@@ -8,9 +8,15 @@ import { Card } from "@/components/ui/card";
 import { getTopicBySlug } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 export async function generateStaticParams() {
-  const topics = await prisma.topic.findMany({ select: { slug: true } });
-  return topics.map((t) => ({ slug: t.slug }));
+  try {
+    const topics = await prisma.topic.findMany({ select: { slug: true } });
+    return topics.map((t) => ({ slug: t.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export default async function TopicDetailsPage({ params }: { params: Promise<{ slug: string }> }) {

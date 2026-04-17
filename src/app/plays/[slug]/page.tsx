@@ -4,6 +4,8 @@ import { PageHeader } from "@/components/common/page-header";
 import { Card } from "@/components/ui/card";
 import { getOffers, getTrendingTopics, playCards } from "@/lib/data";
 
+export const dynamic = 'force-dynamic';
+
 export function generateStaticParams() {
   return playCards.map((p) => ({ slug: p.slug }));
 }

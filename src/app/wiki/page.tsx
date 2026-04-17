@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getWikiPages } from "@/lib/data";
 
+export const dynamic = 'force-dynamic';
+
 export default async function WikiPage() {
   const pages = await getWikiPages();
 

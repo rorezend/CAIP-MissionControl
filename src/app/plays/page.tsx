@@ -4,6 +4,8 @@ import { PageHeader } from "@/components/common/page-header";
 import { Card } from "@/components/ui/card";
 import { playCards } from "@/lib/data";
 
+export const dynamic = 'force-dynamic';
+
 export default function PlaysPage() {
   return (
     <div className="space-y-7">

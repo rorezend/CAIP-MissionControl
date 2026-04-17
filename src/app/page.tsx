@@ -6,8 +6,11 @@ import {
   NowShippingStrip,
   TopicGridBlock,
 } from "@/components/blocks/mission-control-blocks";
+import { RecentBriefings } from "@/components/blocks/recent-briefings";
 import { GlobalSearch } from "@/components/layout/global-search";
 import { getAgenda, getHomeLeadership, getLayoutBlocks, getQuickLinks, getTrendingTopics } from "@/lib/data";
+
+export const dynamic = 'force-dynamic';
 
 const nowShipping = [
   "AI + Data Go Big",
@@ -52,6 +55,7 @@ export default async function HomePage() {
     <div className="space-y-12">
       <GlobalSearch />
       {renderedBlocks.length > 0 ? renderedBlocks : <TopicGridBlock topics={topics} />}
+      <RecentBriefings />
     </div>
   );
 }

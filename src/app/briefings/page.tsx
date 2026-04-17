@@ -2,6 +2,8 @@ import Link from "next/link";
 import { FileText, Plus, Clock, CheckCircle, AlertTriangle, Loader2, Users, Layers } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 const statusConfig: Record<string, { icon: typeof Clock; color: string; bg: string; label: string }> = {
   GENERATING: { icon: Loader2, color: "text-blue-400", bg: "bg-blue-500/10", label: "Generating" },
   DRAFT: { icon: CheckCircle, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Ready" },

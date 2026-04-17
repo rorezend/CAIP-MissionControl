@@ -9,9 +9,15 @@ import { Separator } from "@/components/ui/separator";
 import { getWikiPageBySlug } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 export async function generateStaticParams() {
-  const pages = await prisma.wikiPage.findMany({ select: { slug: true } });
-  return pages.map((p) => ({ slug: p.slug }));
+  try {
+    const pages = await prisma.wikiPage.findMany({ select: { slug: true } });
+    return pages.map((p) => ({ slug: p.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export default async function WikiDetailsPage({ params }: { params: Promise<{ slug: string }> }) {

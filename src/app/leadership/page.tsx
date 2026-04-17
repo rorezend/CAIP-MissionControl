@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getLeadershipPosts, getLayoutBlocks } from "@/lib/data";
 
+export const dynamic = 'force-dynamic';
+
 export default async function LeadershipPage() {
   const [posts, blocks] = await Promise.all([getLeadershipPosts(), getLayoutBlocks("leadership")]);
   const featured = posts[0];

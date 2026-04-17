@@ -6,9 +6,15 @@ import { Card } from "@/components/ui/card";
 import { getOfferBySlug } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 export async function generateStaticParams() {
-  const offers = await prisma.offer.findMany({ select: { slug: true } });
-  return offers.map((o) => ({ slug: o.slug }));
+  try {
+    const offers = await prisma.offer.findMany({ select: { slug: true } });
+    return offers.map((o) => ({ slug: o.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export default async function OfferDetailsPage({ params }: { params: Promise<{ slug: string }> }) {

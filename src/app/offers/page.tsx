@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { offerNavigatorRecommend, getOffers } from "@/lib/data";
 
+export const dynamic = 'force-dynamic';
+
 export default async function OffersPage() {
   const offers = await getOffers();
   const recommendations: ReturnType<typeof offerNavigatorRecommend> = [];

@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getDashboards } from "@/lib/data";
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardsPage() {
   const dashboards = await getDashboards();
 
